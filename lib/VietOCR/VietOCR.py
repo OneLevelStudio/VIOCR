@@ -26,8 +26,8 @@ def vietocr_process_image(image, image_height, image_min_width, image_max_width)
 def vietocr_process_input(image, image_height, image_min_width, image_max_width):
     img = vietocr_process_image(image, image_height, image_min_width, image_max_width)
     img = img[np.newaxis, ...]
-    img = torch.FloatTensor(img)
-    return img
+    # img = torch.FloatTensor(img)
+    return img.astype(np.float32)
 
 class VietOCR_Vocab():
     def __init__(self, chars):
@@ -77,7 +77,8 @@ def Process_VietOCR(img_path, max_seq_length=128, sos_token=1, eos_token=2, debu
     else:
         img = img_path
     img = vietocr_process_input(img, VIETOCR_CFG['dataset']['image_height'], VIETOCR_CFG['dataset']['image_min_width'], VIETOCR_CFG['dataset']['image_max_width'])  
-    img = np.array(img.to(VIETOCR_CFG['device']))
+    # img = np.array(img.to(VIETOCR_CFG['device']))
+    img = np.array(img)
     
     # CNN
     cnn_input = {ONNX_VIETOCR_CNN.get_inputs()[0].name: img}
