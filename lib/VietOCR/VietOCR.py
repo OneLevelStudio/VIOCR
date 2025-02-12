@@ -1,7 +1,6 @@
 from PIL import Image
 import onnxruntime
 import numpy as np
-import torch
 import math
 
 # ====================================================================================================
@@ -101,8 +100,11 @@ def Process_VietOCR(img_path, max_seq_length=128, sos_token=1, eos_token=2, debu
         }
         output, hidden, _ = ONNX_VIETOCR_DEC.run(None, decoder_input)
         output = np.expand_dims(output, axis=1)
-        output = torch.Tensor(output)
-        values, indices = torch.topk(output, 1)
+
+        # output = torch.Tensor(output)
+        # values, indices = torch.topk(output, 1)
+        indices = np.argpartition(output, -1, axis=-1)[...,-1:]
+
         indices = indices[:, -1, 0]
         indices = indices.tolist()
         translated_sentence.append(indices)
