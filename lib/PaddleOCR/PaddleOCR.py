@@ -360,7 +360,7 @@ pocr_det = POCR_Detection('lib/PaddleOCR/model/det.onnx')
 # pocr_rec = POCR_Recognition('lib/PaddleOCR/model/rec.onnx')
 # pocr_cls = POCR_Classification('lib/PaddleOCR/model/cls.onnx')
 
-def Process_PaddleOCR(img_path, debug_dot=False):
+def Process_PaddleOCR(img_path, padding=1, debug_dot=False):
 
     if debug_dot == True:
         print(".", end="")
@@ -369,7 +369,7 @@ def Process_PaddleOCR(img_path, debug_dot=False):
     obboxs = list(pocr_det(img)) # sort_polygon(list(pocr_det(img)))
     # cropped_images, _angles = pocr_cls([crop_image(img, x) for x in obboxs])
     # ocr_txts, _confidences = pocr_rec(cropped_images)
-    ocr_bboxes = [x1y1wh_to_x1y1x2y2_and_padding(bb, padding=2) for bb in [cv2.boundingRect(obb) for obb in obboxs]]
+    ocr_bboxes = [x1y1wh_to_x1y1x2y2_and_padding(bb, padding=padding) for bb in [cv2.boundingRect(obb) for obb in obboxs]]
     
     # # Visualize
     # for i, ((x1, y1), (x2, y2)) in enumerate(ocr_bboxes):
