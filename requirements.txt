@@ -7,4 +7,3 @@ pillow
 
 # PaddleOCR
 pyclipper
-shapely

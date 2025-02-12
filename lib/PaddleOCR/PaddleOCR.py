@@ -2,7 +2,6 @@ import os
 import cv2
 import math
 import numpy as np
-from shapely.geometry import Polygon
 from pyclipper import PyclipperOffset, JT_ROUND, ET_CLOSEDPOLYGON
 
 # ====================================================================================================
@@ -42,6 +41,16 @@ class POCR_Detection:
         return np.array(filtered_points)
 
     def boxes_from_bitmap(self, output, mask, dest_width, dest_height):
+
+        def polygon_area(points):
+            x = points[:, 0]
+            y = points[:, 1]
+            return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+        def polygon_perimeter(points):
+            rolled_points = np.roll(points, 1, axis=0)
+            distances = np.sqrt(np.sum((points - rolled_points) ** 2, axis=1))
+            return np.sum(distances)
+
         mask = (mask * 255).astype(np.uint8)
         height, width = mask.shape
         outs = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -60,12 +69,18 @@ class POCR_Detection:
             score = self.box_score(output, contour)
             if self.box_thresh > score:
                 continue
-            polygon = Polygon(points)
-            distance = polygon.area / polygon.length
+            
+            # polygon = Polygon(points)
+            # distance = polygon.area / polygon.length
+            area = polygon_area(points)
+            perimeter = polygon_perimeter(points)
+            distance = area / perimeter
+
             offset = PyclipperOffset()
             offset.AddPath(points, JT_ROUND, ET_CLOSEDPOLYGON)
             points = np.array(offset.Execute(distance * 1.5)).reshape((-1, 1, 2))
             box, min_side = self.get_min_boxes(points)
+
             if min_side < self.min_size + 2:
                 continue
             box = np.array(box)
