@@ -1,0 +1,14 @@
+ipykernel
+ipywidgets
+
+onnxruntime
+opencv-python
+pillow
+
+# PaddleOCR
+pyclipper
+shapely
+
+# VietOCR
+torch
+torchvision
