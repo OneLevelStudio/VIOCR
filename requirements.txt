@@ -4,6 +4,3 @@ ipywidgets
 onnxruntime
 opencv-python
 pillow
-
-# PaddleOCR
-pyclipper
