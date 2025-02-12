@@ -67,26 +67,37 @@ ONNX_VIETOCR_CNN = onnxruntime.InferenceSession("lib/VietOCR/model/cnn.onnx")
 ONNX_VIETOCR_ENC = onnxruntime.InferenceSession("lib/VietOCR/model/encoder.onnx")
 ONNX_VIETOCR_DEC = onnxruntime.InferenceSession("lib/VietOCR/model/decoder.onnx")
 
-def Process_VietOCR(img_path, max_seq_length=128, sos_token=1, eos_token=2):
+def Process_VietOCR(img_path, max_seq_length=128, sos_token=1, eos_token=2, debug_dot=False):
+
+    if debug_dot == True:
+        print(".", end="")
+    
     if isinstance(img_path, str):
         img = Image.open(img_path)
     else:
         img = img_path
     img = vietocr_process_input(img, VIETOCR_CFG['dataset']['image_height'], VIETOCR_CFG['dataset']['image_min_width'], VIETOCR_CFG['dataset']['image_max_width'])  
     img = np.array(img.to(VIETOCR_CFG['device']))
+    
     # CNN
     cnn_input = {ONNX_VIETOCR_CNN.get_inputs()[0].name: img}
     src = ONNX_VIETOCR_CNN.run(None, cnn_input)
+
     # Encoder
     encoder_input = {ONNX_VIETOCR_ENC.get_inputs()[0].name: src[0]}
     encoder_outputs, hidden = ONNX_VIETOCR_ENC.run(None, encoder_input)
     translated_sentence = [[sos_token] * len(img)]
     max_length = 0
+
     while max_length <= max_seq_length and not all(
         np.any(np.asarray(translated_sentence).T == eos_token, axis=1)
     ):
         tgt_inp = translated_sentence
-        decoder_input = {ONNX_VIETOCR_DEC.get_inputs()[0].name: tgt_inp[-1], ONNX_VIETOCR_DEC.get_inputs()[1].name: hidden, ONNX_VIETOCR_DEC.get_inputs()[2].name: encoder_outputs}
+        decoder_input = {
+            ONNX_VIETOCR_DEC.get_inputs()[0].name: tgt_inp[-1], 
+            ONNX_VIETOCR_DEC.get_inputs()[1].name: hidden, 
+            ONNX_VIETOCR_DEC.get_inputs()[2].name: encoder_outputs
+        }
         output, hidden, _ = ONNX_VIETOCR_DEC.run(None, decoder_input)
         output = np.expand_dims(output, axis=1)
         output = torch.Tensor(output)
@@ -96,5 +107,7 @@ def Process_VietOCR(img_path, max_seq_length=128, sos_token=1, eos_token=2):
         translated_sentence.append(indices)
         max_length += 1
         del output
+
     translated_sentence = np.asarray(translated_sentence).T
+
     return vietocr_vocab.decode(translated_sentence[0].tolist())

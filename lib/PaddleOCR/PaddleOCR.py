@@ -7,7 +7,7 @@ from pyclipper import PyclipperOffset, JT_ROUND, ET_CLOSEDPOLYGON
 
 # ====================================================================================================
 
-class Detection:
+class POCR_Detection:
     def __init__(self, onnx_path, session=None):
         self.session = session
         if self.session is None:
@@ -165,7 +165,7 @@ class Detection:
         boxes, scores = self.boxes_from_bitmap(outputs, outputs > self.mask_thresh, w, h)
         return self.filter_polygon(boxes, (h, w))
 
-class Classification:
+class POCR_Classification:
     def __init__(self, onnx_path, session=None):
         self.session = session
         if self.session is None:
@@ -222,7 +222,7 @@ class Classification:
                     images[indices[i + j]] = cv2.rotate(images[indices[i + j]], 1)
         return images, results
 
-class Recognition:
+class POCR_Recognition:
     def __init__(self, onnx_path, session=None):
         self.session = session
         if self.session is None:
@@ -232,7 +232,7 @@ class Recognition:
             self.session = InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
         self.inputs = self.session.get_inputs()[0]
         self.input_shape = [3, 48, 320]
-        self.ctc_decoder = CTCDecoder()
+        self.ctc_decoder = POCR_CTCDecoder()
 
     def resize(self, image, max_wh_ratio):
         input_h, input_w = self.input_shape[1], self.input_shape[2]
@@ -284,7 +284,7 @@ class Recognition:
                 confidences[indices[index + i]] = confidence[i]
         return results, confidences
 
-class CTCDecoder(object):
+class POCR_CTCDecoder(object):
     def __init__(self):
         self.character = ['blank', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
                           '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
@@ -348,24 +348,27 @@ def crop_image(image, points):
         image = np.rot90(image, k=3)
     return image
 
+def x1y1wh_to_x1y1x2y2_and_padding(bbox, padding):
+    x, y, w, h = bbox
+    x_min, y_min = x - padding, y - padding
+    x_max, y_max = x + w + padding, y + h + padding
+    return ((x_min, y_min), (x_max, y_max))
+
 # ====================================================================================================
 
-pocr_det = Detection('lib/PaddleOCR/model/det.onnx')
-pocr_rec = Recognition('lib/PaddleOCR/model/rec.onnx')
-pocr_cls = Classification('lib/PaddleOCR/model/cls.onnx')
+pocr_det = POCR_Detection('lib/PaddleOCR/model/det.onnx')
+# pocr_rec = POCR_Recognition('lib/PaddleOCR/model/rec.onnx')
+# pocr_cls = POCR_Classification('lib/PaddleOCR/model/cls.onnx')
 
-def Process_PaddleOCR(img_path):
+def Process_PaddleOCR(img_path, debug_dot=False):
 
-    def x1y1wh_to_x1y1x2y2_and_padding(bbox, padding):
-        x, y, w, h = bbox
-        x_min, y_min = x - padding, y - padding
-        x_max, y_max = x + w + padding, y + h + padding
-        return ((x_min, y_min), (x_max, y_max))
+    if debug_dot == True:
+        print(".", end="")
 
     img = cv2.imread(img_path)
-    obboxs = sort_polygon(list(pocr_det(img)))
-    cropped_images, _angles = pocr_cls([crop_image(img, x) for x in obboxs])
-    ocr_txts, _confidences = pocr_rec(cropped_images)
+    obboxs = list(pocr_det(img)) # sort_polygon(list(pocr_det(img)))
+    # cropped_images, _angles = pocr_cls([crop_image(img, x) for x in obboxs])
+    # ocr_txts, _confidences = pocr_rec(cropped_images)
     ocr_bboxes = [x1y1wh_to_x1y1x2y2_and_padding(bb, padding=2) for bb in [cv2.boundingRect(obb) for obb in obboxs]]
     
     # # Visualize
@@ -375,4 +378,4 @@ def Process_PaddleOCR(img_path):
     #     cv2.putText(img, ocr_txts[i], (int(x1), int(y1 - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
     # cv2.imwrite('output.jpg', img)
 
-    return ocr_bboxes, ocr_txts
+    return ocr_bboxes
