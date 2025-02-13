@@ -1,6 +1,11 @@
-ipykernel
-ipywidgets
+# ipykernel
+# ipywidgets
 
+# VIOCR
 onnxruntime
-opencv-python
+opencv-python-headless
 pillow
+
+# API
+fastapi
+uvicorn
